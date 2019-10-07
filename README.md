@@ -7,7 +7,7 @@ A proxy for gather trade values from multiple sources.
 Projects:
 
 
-################### Web Api ######################################
+## Web Api ######################################
 
 A .Net Core application responsible for gathering trading information from multiple sources. 
 The sources definition is registered at appsettings.json, making the project agnostic of them.
@@ -19,7 +19,7 @@ Additionally, information is meanted to be stored in a mongoDB, as it is receive
 
 The Api communicates with the outside world using GraphQL Api middleware.
 
-################### Web Client ######################################
+## Web Client ######################################
 
 An angular 7 application responsible for consuming the Web Api and display trades.
 Communication with the GraphQL Api of the server is being made using Apollo library.
@@ -30,12 +30,12 @@ The app gives users the ability to pool the API for sources using HTTP requests.
 Based on their criteria, they can either listen to a live feed using web socket communication or ask for historical data using HTTP.
 
 
-############### Run Instructions ##############################
+## Run Instructions ##############################
 
 Prerequisites : Latest Visual Studio or Visual Studio code, node.js (npm) and an internet connection :)
 
- ## Web Api: Simply open the solution and run using IIS Express.
+ ####### Web Api: Simply open the solution and run using IIS Express.
  
- ## Web Client: With a command prompt navigate to MarketFellowApi/ClientApp and run: "npm install" and then "ng serve"
+ ####### Web Client: With a command prompt navigate to MarketFellowApi/ClientApp and run: "npm install" and then "ng serve"
  
- ## Open a browser at http://localhost:4200/home
+ ##### Open a browser at http://localhost:4200/home
