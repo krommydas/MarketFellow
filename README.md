@@ -34,8 +34,8 @@ Based on their criteria, they can either listen to a live feed using web socket 
 
 Prerequisites : Latest Visual Studio or Visual Studio code, node.js (npm) and an internet connection :)
 
- ####### Web Api: Simply open the solution and run using IIS Express.
+Web Api: Simply open the solution and run using IIS Express.
  
- ####### Web Client: With a command prompt navigate to MarketFellowApi/ClientApp and run: "npm install" and then "ng serve"
+Web Client: With a command prompt navigate to MarketFellowApi/ClientApp and run: "npm install" and then "ng serve"
  
  ##### Open a browser at http://localhost:4200/home
