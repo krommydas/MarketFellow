@@ -11,5 +11,7 @@ namespace FellowLibrary.Crawler
         public String IDField { get; set; }
 
         public String NameField { get; set; }
+
+        public Dictionary<String, String> AdditionalHeaders { get; set; }
    }
 }

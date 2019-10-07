@@ -1,3 +1,7 @@
+export class MarketFellowSubscription {
+    tradyEntry: TradeEntry;
+}
+
 export class MarketFellowQuery {
     marketProviders: MarketProvider[];
     tradingPairs: TradePair[];
@@ -10,18 +14,18 @@ export class MarketProvider {
 }
 
 export class TradePair {
-    id: number;
+    id: string;
     name: string;
 }
 
 export class Filters {
-    constructor(marketProvider: number, tradePair: number) {
+    constructor(marketProvider: number, tradePair: string) {
         this.MarketProvider = marketProvider;
         this.TradePair = tradePair;
     }
 
     MarketProvider: number
-    TradePair: number
+    TradePair: string
 }
 
 import { GridColumn } from '../grid/grid.model'

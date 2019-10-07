@@ -1,19 +1,36 @@
 <mat-card>
+  <mat-grid-list cols="4" rowHeight="2:1">
 
-  <mat-select (selectionChange)="onProviderSelected($event.source.value)" [(value)]="filters.MarketProvider">
-    <mat-option *ngFor="let provider of marketProviders" [value]="provider.id">
-      {{provider.name}}
-    </mat-option>
-  </mat-select>
+    <mat-grid-tile></mat-grid-tile>
 
-  <mat-select (selectionChange)="onTradingPairSelected($event.source.value)" *ngIf="filters && filters.MarketProvider" [(value)]="filters.TradePair">
-    <mat-option *ngFor="let provider of marketProviders" [value]="provider.id">
-      {{provider.name}}
-    </mat-option>
-  </mat-select>
+    <mat-grid-tile colspan="1">
+      <mat-form-field>
+        <mat-label>Market Provider</mat-label>
+        <mat-select (selectionChange)="onProviderSelected($event.source.value)" [(value)]="filters.MarketProvider">
+          <mat-option *ngFor="let provider of marketProviders" [value]="provider.id">
+            {{provider.name}}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-grid-tile>
 
-  <app-grid *ngIf="tradeEntries" columns="tradeEntryGridColumns" data="tradeEntries">
+    <mat-grid-tile colspan="1">
+      <mat-form-field>
+        <mat-label>Trading Pair</mat-label>
+        <mat-select (selectionChange)="onTradingPairSelected($event.source.value)" [(value)]="filters.TradePair">
+          <mat-option *ngFor="let pair of tradePairs" [value]="pair.id">
+            {{pair.name}}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-grid-tile>
 
-  </app-grid>
+    <mat-grid-tile></mat-grid-tile>
+
+    <mat-grid-tile colspan="4" rowspan="2">
+      <app-grid *ngIf="tradeEntryGridColumns" [columns]="tradeEntryGridColumns" [data]="tradeEntries"></app-grid>
+    </mat-grid-tile>
+
+  </mat-grid-list>
 
 </mat-card>

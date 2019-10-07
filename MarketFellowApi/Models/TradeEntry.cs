@@ -1,12 +1,17 @@
 ﻿using FellowLibrary.Models;
 using GraphQL.Types;
 
-public class TradeEntryType : ObjectGraphType<TradeEntry>
+namespace MarketFellowApi.Models
 {
-    public TradeEntryType()
+    public class TradeEntryType : ObjectGraphType<TradeEntry>
     {
-        Field("price", x => x.Price);
-        Field("time", x => x.DateTime);
-        Field("tradePair", x => x.TradingPair);
+        public TradeEntryType()
+        {
+            Field("price", x => x.Price);
+            Field("time", x => x.DateTime);
+            Field("tradePair", x => x.TradingPair);
+            Field("provider", x => x.Provider);
+            Field("id", x => x.ID);
+        }
     }
 }

@@ -15,14 +15,28 @@ export class HomeComponent implements OnInit {
     marketProviders: MarketProvider[];
     tradePairs: TradePair[];
     filters: Filters;
+    tradeEntries: TradeEntry[];
 
-    tradeEntryGridColumns = TradeEntry.getGridColumns();
+    tradeEntryGridColumns: GridColumn[];
 
     ngOnInit() {
         this.dataService.getMarketProviders().subscribe(result => this.marketProviders = result);
 
+        this.tradeEntryGridColumns = TradeEntry.getGridColumns();
+
         var routeParams = this.currentRoute.snapshot.paramMap;
-        this.filters = new Filters(+routeParams.get('provider'), +routeParams.get('tradingPair'));
+        var selectedProvider = +routeParams.get('provider');
+        var selectedPair = routeParams.get('tradingPair');
+
+        if (selectedProvider)
+            this.dataService.getTradePairs(selectedProvider).subscribe(result => this.tradePairs = result);
+
+        this.filters = new Filters(selectedProvider, selectedPair);
+
+        setTimeout(x =>
+            this.dataService.getTradeEntriesFeed(this.filters).subscribe(items => this.tradeEntries = []), 7000);
+
+        
     }
 
     onProviderSelected(selectedProvider: number) {
@@ -30,6 +44,6 @@ export class HomeComponent implements OnInit {
     }
 
     onTradingPairSelected(selectedPair: number) {
-        this.router.navigate(['/home', { provider: selectedPair, tradingPair: selectedPair }]);
+        this.router.navigate(['/home', { provider: this.filters.MarketProvider, tradingPair: selectedPair }]);
     }
 }

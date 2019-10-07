@@ -11,7 +11,14 @@ namespace FellowLibrary.Crawler
         public String Name { get; set; }
 
         public TradingPairConfiguration TradingPairConfiguration { get; set; }
+
+        public TradingEntryConfiguration TradingEntryConfiguration { get; set; }
     }
 
-    public class MarketProvidersConfiguration : List<MarketProviderConfiguration> { }
+    public class MarketProvidersConfiguration : List<MarketProviderConfiguration>
+    {
+      
+
+
+    }
 }

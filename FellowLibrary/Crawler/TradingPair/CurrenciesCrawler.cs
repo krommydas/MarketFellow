@@ -18,30 +18,50 @@ namespace FellowLibrary.Crawler
 
         public Task<IEnumerable<Models.TradingPair>> GetTradingPairs(TradingPairConfiguration configuration)
         {
-            return _Client.GetAsync(configuration.Url)
-                .ContinueWith((response) => response.Result.Content.ReadAsAsync<IEnumerable<Object>>()
-                .Result.Select(boxed => Unbox(boxed, configuration)));
+            //return ConfigureRequest(configuration)
+            //    .ContinueWith((response) => new Models.TradingPair[] { Unbox(response.Result.Content.ReadAsAsync<Object>().Result, configuration) }.AsEnumerable());
+
+            return ConfigureRequest(configuration)
+                .ContinueWith((response) => Unbox(response.Result.Content.ReadAsAsync<Object>().Result, configuration));
         }
 
-        private Models.TradingPair Unbox(object boxedResult, TradingPairConfiguration configuration)
+        private IEnumerable<Models.TradingPair> Unbox(object boxedResult, TradingPairConfiguration configuration)
         {
-            if (!(boxedResult is Dictionary<String, Object>))
-                return null;
+            List<Models.TradingPair> result = new List<Models.TradingPair>();
 
-            Dictionary<String, Object> dict = boxedResult as Dictionary<String, Object>;
+            if (boxedResult is null) return result;
 
-            if (!dict.ContainsKey(configuration.IDField) || !dict.ContainsKey(configuration.NameField))
-                return null;
+            Newtonsoft.Json.Linq.JArray items = boxedResult as Newtonsoft.Json.Linq.JArray;
+            if (items == null) return result;
 
-            object idField;
-            if (!dict.TryGetValue(configuration.IDField, out idField) || !(idField is string))
-                return null;
+            foreach (var item in items)
+            {
+                if (item is null || !item.HasValues) continue;
 
-            object nameField;
-            if (!dict.TryGetValue(configuration.NameField, out nameField) || !(nameField is string))
-                return null;
+                String id = item.Value<String>(configuration.IDField);
+                if (String.IsNullOrEmpty(id)) continue;
 
-            return new Models.TradingPair() { ID = (string)idField, Name = (string)nameField };
+                String name = item.Value<String>(configuration.NameField);
+                if (String.IsNullOrEmpty(name)) continue;
+
+                result.Add(new Models.TradingPair() { ID = id, Name = name });
+            }
+
+            return result;
+        }
+
+        private Task<HttpResponseMessage> ConfigureRequest(TradingPairConfiguration configuration)
+        {
+            if (!Uri.IsWellFormedUriString(configuration.Url, UriKind.RelativeOrAbsolute))
+                throw new UriFormatException("trading pair request url issues");
+
+            if(configuration.AdditionalHeaders != null)
+            {
+                foreach (var header in configuration.AdditionalHeaders)
+                    _Client.DefaultRequestHeaders.Add(header.Key, header.Value);
+            }
+
+            return _Client.GetAsync(new Uri(configuration.Url));
         }
     }
 }

@@ -8,7 +8,7 @@ using MongoDB.Driver;
 using System.Threading.Tasks;
 using System.Net.Http;
 
-namespace MarketFellow.Models
+namespace MarketFellowApi.Models
 {
     public class MarketFellowQuery : ObjectGraphType
     {
@@ -17,7 +17,7 @@ namespace MarketFellow.Models
             Field<ListGraphType<MarketProviderType>>("marketProviders", 
                 resolve: context => marketProviderConfiguration.Select(x => new FellowLibrary.Models.MarketProvider() { ID = x.ID, Name = x.Name }));
 
-            Field<ListGraphType<TradingPairType>>("tradingPairs", 
+            FieldAsync<ListGraphType<TradingPairType>>("tradingPairs", 
                 arguments: new QueryArguments(new QueryArgument<IntGraphType>(){ Name = "marketProvider" }), 
                 resolve: context => GetTradingPairs(httpClient, marketProviderConfiguration, context));
 
@@ -27,7 +27,7 @@ namespace MarketFellow.Models
                  resolve: context => GetTradeEntries(storeProvider, context));
         }
 
-        private object GetTradingPairs(HttpClient httpClient, IEnumerable<FellowLibrary.Crawler.MarketProviderConfiguration> marketProviderConfiguration, 
+        private Task<object> GetTradingPairs(HttpClient httpClient, IEnumerable<FellowLibrary.Crawler.MarketProviderConfiguration> marketProviderConfiguration, 
             ResolveFieldContext<object> context)
         {
             if (context == null) throw new ArgumentNullException();
@@ -37,7 +37,8 @@ namespace MarketFellow.Models
 
             var pairsProvider = new FellowLibrary.Crawler.TradingPairCrawler(httpClient);
 
-            return Task.WhenAll(marketProviderConfiguration.Select(x => pairsProvider.GetTradingPairs(x.TradingPairConfiguration)));
+            return Task.WhenAll(marketProviderConfiguration.Select(x => pairsProvider.GetTradingPairs(x.TradingPairConfiguration)))
+                .ContinueWith(x => x.Result.SelectMany(z => z) as Object);
         }
 
         private object GetTradeEntries(DatabaseContext storeProvider, ResolveFieldContext<object> context)
@@ -54,7 +55,10 @@ namespace MarketFellow.Models
             var tradingPair = context.GetArgument<String>("tradingPair");
             if (tradingPair != null) finalFilter = finalFilter & mongoFilterBuilder.Eq(x => x.TradingPair, tradingPair);
 
-            return storeProvider.Trades.FindAsync(finalFilter);
+
+            return new FellowLibrary.Models.TradeEntry[] { };
+
+            //return storeProvider.Trades.FindAsync(finalFilter);
         }
     }
 }

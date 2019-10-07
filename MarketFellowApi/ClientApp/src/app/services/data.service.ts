@@ -1,8 +1,8 @@
 import { Injectable, Query } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Apollo } from 'apollo-angular';
+import { Apollo, QueryRef  } from 'apollo-angular';
 import gql  from 'graphql-tag';
-import { MarketProvider, TradePair, Filters, TradeEntry, MarketFellowQuery } from './data.model';
+import { MarketProvider, TradePair, Filters, TradeEntry, MarketFellowQuery, MarketFellowSubscription } from './data.model';
 import { map } from 'rxjs/operators';
 import { of } from 'zen-observable';
 
@@ -23,10 +23,43 @@ export class DataService {
     }
 
     getTradeEntries(filters: Filters): Observable<TradeEntry[]> {
+        return this.getTradeEntriesQuery(filters).valueChanges.pipe(map(result => result.data.tradingEntries));
+    }
+
+    getTradeEntriesFeed(filters: Filters): Observable<TradeEntry> {
+        //return this.apollo.subscribe<MarketFellowSubscription>({
+        //    query: gql`subscription tradingEntriesFeed {
+        //                                      tradeEntry(marketProvider: ${filters.MarketProvider}, tradingPair: "${filters.TradePair}")
+        //                                      { price time tradePair }}`}).pipe(map(result => result.data.tradyEntry));
+
+
+        var query = this.getTradeEntriesQuery(filters);
+
+        query.subscribeToMore({
+            document: gql`subscription tradingEntriesFeed {
+                                              tradeEntry(marketProvider: ${filters.MarketProvider}, tradingPair: "${filters.TradePair}")
+                                              { price time tradePair }}`,
+            updateQuery: (prev, { subscriptionData }) => {
+                if (!subscriptionData.data) {
+                    return prev;
+                }
+
+                const newItem = subscriptionData.data.tradeEntry;
+
+                prev.tradingEntries.push(newItem);
+
+                return prev;
+            }
+        });
+
+        return query.valueChanges.pipe(map(result => result.data.tradingEntries[0]));
+    }
+
+    private getTradeEntriesQuery(filters: Filters): QueryRef<MarketFellowQuery> {
         return this.apollo.watchQuery<MarketFellowQuery>({
             query: gql`query tradingEntries {
-                                              tradingEntries(marketProvider: ${filters.MarketProvider}, tradingPair: ${filters.TradePair})
+                                              tradingEntries(marketProvider: ${filters.MarketProvider}, tradingPair: "${filters.TradePair}")
                                             { price time tradePair }}`
-        }).valueChanges.pipe(map(result => result.data.tradingEntries));
+        });
     }
 }

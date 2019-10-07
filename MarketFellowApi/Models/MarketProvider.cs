@@ -1,7 +1,7 @@
 ﻿using FellowLibrary.Models;
 using GraphQL.Types;
 
-namespace MarketFellow.Models
+namespace MarketFellowApi.Models
 {
     public class MarketProviderType : ObjectGraphType<FellowLibrary.Models.MarketProvider>
     {

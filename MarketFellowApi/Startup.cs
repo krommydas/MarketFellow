@@ -12,8 +12,12 @@ using GraphQL.Server;
 using GraphQL.Server.Ui.Playground;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net;
+using System.Net.Sockets;
+using System.Net.WebSockets;
+using System;
 
-namespace MarketFellow
+namespace MarketFellowApi
 {
     public class Startup
     {
@@ -37,10 +41,11 @@ namespace MarketFellow
 
             services.AddScoped<IDependencyResolver>(x => new FuncDependencyResolver(x.GetRequiredService));
             services.AddScoped<Models.MarketFellowSchema>();
-            services.AddGraphQL(x =>  x.ExposeExceptions = true ).AddGraphTypes(ServiceLifetime.Scoped);
+            services.AddGraphQL(x => { x.ExposeExceptions = true; x.EnableMetrics = true; }  ).AddGraphTypes(ServiceLifetime.Scoped).AddWebSockets();
 
             services.AddTransient<DatabaseContext>();
-            services.AddHttpClient();
+            services.AddSingleton<ClientWebSocket>();
+
             services.AddHttpClient<Models.MarketFellowQuery>();
 
             // In production, the Angular files will be served from this directory
@@ -53,6 +58,8 @@ namespace MarketFellow
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault | SecurityProtocolType.Tls;
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -66,31 +73,37 @@ namespace MarketFellow
             //app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
+            //app.UseCors(x => x.WithOrigins)
             app.UseCors(policy => { policy.AllowAnyOrigin(); policy.AllowAnyHeader(); policy.AllowCredentials(); policy.AllowAnyMethod(); });
             app.UseGraphQL<Models.MarketFellowSchema>();
-            app.UseGraphQLPlayground(new GraphQLPlaygroundOptions());
-
-            app.UseMvc(routes =>
-            {
-                routes.MapRoute(
-                    name: "default",
-                    template: "{controller}/{action=Index}/{id?}");
-            });
+            app.UseGraphQLWebSockets<Models.MarketFellowSchema>();
 
             app.UseGraphQLPlayground(new GraphQLPlaygroundOptions());
+            WebSocketOptions socketOptions = new WebSocketOptions() { KeepAliveInterval = TimeSpan.FromSeconds(120) };
+        
+            app.UseWebSockets(socketOptions);
 
-            app.UseSpa(spa =>
-            {
-                // To learn more about options for serving an Angular SPA from ASP.NET Core,
-                // see https://go.microsoft.com/fwlink/?linkid=864501
+            //app.UseMvc(routes =>
+            //{
+            //    routes.MapRoute(
+            //        name: "default",
+            //        template: "{controller}/{action=Index}/{id?}");
+            //});
 
-                spa.Options.SourcePath = "ClientApp";
+            //app.UseGraphQLPlayground(new GraphQLPlaygroundOptions());
 
-                if (env.IsDevelopment())
-                {
-                    spa.UseAngularCliServer(npmScript: "start");
-                }
-            });
+            //    app.UseSpa(spa =>
+            //    {
+            //        // To learn more about options for serving an Angular SPA from ASP.NET Core,
+            //        // see https://go.microsoft.com/fwlink/?linkid=864501
+
+            //        spa.Options.SourcePath = "ClientApp";
+
+            //        //if (env.IsDevelopment())
+            //        //{
+            //        //    spa.UseProxyToSpaDevelopmentServer("http://localhost:4200");
+            //        //}
+            //    });
         }
     }
 }

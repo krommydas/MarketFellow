@@ -2,7 +2,7 @@
 using GraphQL;
 using MongoDB.Driver;
 
-namespace MarketFellow.Models
+namespace MarketFellowApi.Models
 {
     public class TradeEntryFilters : ObjectGraphType
     {

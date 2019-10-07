@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MarketFellow.Controllers
+namespace MarketFellowApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
