@@ -41,10 +41,13 @@ namespace MarketFellowApi
 
             services.AddScoped<IDependencyResolver>(x => new FuncDependencyResolver(x.GetRequiredService));
             services.AddScoped<Models.MarketFellowSchema>();
-            services.AddGraphQL(x => { x.ExposeExceptions = true; x.EnableMetrics = true; }  ).AddGraphTypes(ServiceLifetime.Scoped).AddWebSockets();
+            services.AddGraphQL(x => { x.ExposeExceptions = true; x.EnableMetrics = true; })
+                .AddGraphTypes(ServiceLifetime.Scoped).AddWebSockets();
+           // services.AddSingleton<GraphQLHttpMiddleware>();
+
 
             services.AddTransient<DatabaseContext>();
-            services.AddSingleton<ClientWebSocket>();
+            services.AddTransient<ClientWebSocket>();
 
             services.AddHttpClient<Models.MarketFellowQuery>();
 
@@ -73,24 +76,14 @@ namespace MarketFellowApi
             //app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
+          
             //app.UseCors(x => x.WithOrigins)
             app.UseCors(policy => { policy.AllowAnyOrigin(); policy.AllowAnyHeader(); policy.AllowCredentials(); policy.AllowAnyMethod(); });
+            app.UseWebSockets();
             app.UseGraphQL<Models.MarketFellowSchema>();
             app.UseGraphQLWebSockets<Models.MarketFellowSchema>();
-
-            app.UseGraphQLPlayground(new GraphQLPlaygroundOptions());
-            WebSocketOptions socketOptions = new WebSocketOptions() { KeepAliveInterval = TimeSpan.FromSeconds(120) };
-        
-            app.UseWebSockets(socketOptions);
-
-            //app.UseMvc(routes =>
-            //{
-            //    routes.MapRoute(
-            //        name: "default",
-            //        template: "{controller}/{action=Index}/{id?}");
-            //});
-
-            //app.UseGraphQLPlayground(new GraphQLPlaygroundOptions());
+          
+            app.UseGraphQLPlayground(new GraphQLPlaygroundOptions());     
 
             //    app.UseSpa(spa =>
             //    {

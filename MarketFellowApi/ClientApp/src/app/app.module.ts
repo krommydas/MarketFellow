@@ -23,6 +23,7 @@ import { MatGridListModule } from '@angular/material/grid-list';
 import { split } from 'apollo-link';
 import { getMainDefinition } from 'apollo-utilities';
 import { OperationDefinitionNode } from 'graphql';
+import { SubscriptionClient } from 'subscriptions-transport-ws';
 
 @NgModule({
     declarations: [
@@ -72,11 +73,11 @@ export class AppModule {
 
         // Create a WebSocket link:
         const ws = new WebSocketLink({
-            uri: `ws://localhost:55241/graphql/subscriptions`,
+            uri: `ws://localhost:55241/graphql`,
             options: {
-                reconnect: false,
+                reconnect: true,
                 lazy: true,
-                inactivityTimeout: 5000
+                inactivityTimeout: 50000, timeout: 50000
             }
         });
 

@@ -32,8 +32,8 @@ namespace FellowLibrary.Crawler
 
             WebSocketCancelation cancelationProvider = new WebSocketCancelation(_Client);
 
-            cancelationProvider.Disconnect().ContinueWith(x => Start(_Configuration, _TradingPair));
-            
+            this.Disconnect().ContinueWith(x => Start(_Configuration, _TradingPair));
+
             return new WebSocketCancelation(_Client);
         }
 
@@ -43,28 +43,41 @@ namespace FellowLibrary.Crawler
                 .ContinueWith(x => Receive(configuration));
         }
 
+        private Task Disconnect()
+        {
+            switch(_Client.State)
+            {
+                case WebSocketState.Closed:
+                case WebSocketState.None:
+                case WebSocketState.Aborted:
+                    return Task.CompletedTask;
+                default:
+                    return Disconnect();
+            }
+        }
+
         private Task Connect(MarketProviderConfiguration configuration, String tradingPairID)
         {
             //if (_Client.State == WebSocketState)
             //    _Client.Close();
-            if (!Uri.IsWellFormedUriString(configuration.TradingEntryConfiguration.Url, UriKind.Absolute))
+            if (!Uri.IsWellFormedUriString(configuration.TradesConfiguration.Url, UriKind.Absolute))
                 throw new UriFormatException();
 
-            return _Client.ConnectAsync(new Uri(configuration.TradingEntryConfiguration.Url), new System.Threading.CancellationToken());
+            return _Client.ConnectAsync(new Uri(configuration.TradesConfiguration.Url), new System.Threading.CancellationToken());
         }
 
         private Task SubscribeToTradingChannel(MarketProviderConfiguration configuration, String tradingPairID) 
         {
-            if (String.IsNullOrEmpty(configuration.TradingEntryConfiguration.SubscriptionMessage))
+            if (String.IsNullOrEmpty(configuration.TradesConfiguration.SubscriptionMessage))
                 throw new ArgumentNullException();
 
-            String withTradingPair = configuration.TradingEntryConfiguration.SubscriptionMessage.Replace("@tradingPair@", tradingPairID);
+            String withTradingPair = configuration.TradesConfiguration.SubscriptionMessage.Replace("@tradingPair@", tradingPairID);
             return _Client.SendAsync(ToByteArray(withTradingPair), WebSocketMessageType.Binary, true, new System.Threading.CancellationToken());
         }
 
         private void Receive(MarketProviderConfiguration configuration)
         {
-            ArraySegment<byte> response = new ArraySegment<byte>();
+            ArraySegment<byte> response = WebSocket.CreateServerBuffer(500);
             _Client.ReceiveAsync(response, new System.Threading.CancellationToken())
                 .ContinueWith(x => {
 
@@ -79,26 +92,13 @@ namespace FellowLibrary.Crawler
 
         private ArraySegment<byte> ToByteArray(String json)
         {
-            MemoryStream ms = new MemoryStream();
-            using (BsonDataWriter writer = new BsonDataWriter(ms))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Serialize(writer, json);
-            }
-
-            return new ArraySegment<byte>(ms.ToArray());
+            byte[] encoded = Encoding.UTF8.GetBytes(json);
+            return new ArraySegment<byte>(encoded);
         }
         private object FromByteArray(ArraySegment<byte> message)
         {
-            MemoryStream ms = new MemoryStream(message.ToArray());
-            Object result;
-            using (BsonDataReader reader = new BsonDataReader(ms))
-            {
-                JsonSerializer serializer = new JsonSerializer();
-                result = serializer.Deserialize(reader);
-            }
-
-            return result;
+            String textMessage = Encoding.UTF8.GetString(message.ToArray());
+            return JsonConvert.DeserializeObject(textMessage);
         }
 
         private Models.TradeEntry Unbox(object boxedResult, MarketProviderConfiguration configuration)
@@ -108,20 +108,20 @@ namespace FellowLibrary.Crawler
             Newtonsoft.Json.Linq.JObject item = boxedResult as Newtonsoft.Json.Linq.JObject;
             if (item == null) throw new FormatException();
 
-            foreach(var tag in configuration.TradingEntryConfiguration.TradeEntryTags)
+            foreach(var tag in configuration.TradesConfiguration.TradeEntryTags)
             {
                 JToken tagValue;
                 if(!item.TryGetValue(tag.Key, out tagValue) || !Equals(tagValue, tag.Value))
                     throw new FormatException();
             }
 
-            decimal? price = item.Value<decimal?>(configuration.TradingEntryConfiguration.PriceField);
+            decimal? price = item.Value<decimal?>(configuration.TradesConfiguration.PriceField);
             if (!price.HasValue) throw new FormatException();
 
-            String tradingPairID = item.Value<String>(configuration.TradingEntryConfiguration.TradingPairID);
+            String tradingPairID = item.Value<String>(configuration.TradesConfiguration.TradingPairID);
             if (String.IsNullOrEmpty(tradingPairID)) throw new FormatException();
 
-            DateTime? time = item.Value<DateTime?>(configuration.TradingEntryConfiguration.TimeField);
+            DateTime? time = item.Value<DateTime?>(configuration.TradesConfiguration.TimeField);
             if (!time.HasValue) throw new FormatException();
 
             return new Models.TradeEntry() { DateTime = time.Value, Price = price.Value, TradingPair = tradingPairID , Provider = configuration.ID };
