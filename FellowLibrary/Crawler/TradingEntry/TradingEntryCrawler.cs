@@ -7,87 +7,95 @@ using System.IO;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FellowLibrary.Crawler
 {
-    public class TradingEntryCrawler: IObservable<Models.TradeEntry>
+    public class TradingEntryCrawler
     {
-        public TradingEntryCrawler(ClientWebSocket connectionProvider, MarketProviderConfiguration forProvider, String forTradingPair)
+        public TradingEntryCrawler(MarketProviderConfiguration forProvider, String forTradingPair)
         {
-            _Client = connectionProvider;
+            if (forProvider == null || forProvider.TradesConfiguration == null || !forProvider.TradesConfiguration.IsValid())
+                throw new MissingMemberException("trades are not configured well");
+
+            if (String.IsNullOrEmpty(forTradingPair))
+                throw new MissingMemberException("subscription trading pair is missing");
+
             _Configuration = forProvider;
             _TradingPair = forTradingPair;
+
+            _Client = new ClientWebSocket();
         }
 
         ClientWebSocket _Client;
         MarketProviderConfiguration _Configuration;
-        String _TradingPair;
+        String _TradingPair;   
 
-        private IObserver<Models.TradeEntry> _observer;
-
-        public IDisposable Subscribe(IObserver<Models.TradeEntry> observer)
+        public async Task Initiate(CancellationToken cancelationToken)
         {
-            _observer = observer;
+            if (cancelationToken.IsCancellationRequested)
+                return;
 
-            WebSocketCancelation cancelationProvider = new WebSocketCancelation(_Client);
+            if (_Client.State != WebSocketState.None)
+                throw new WebSocketException("can not re start a connection");
 
-            this.Disconnect().ContinueWith(x => Start(_Configuration, _TradingPair));
+            await Connect(cancelationToken);
 
-            return new WebSocketCancelation(_Client);
-        }
-
-        private Task Start(MarketProviderConfiguration configuration, String tradingPairID)
-        {
-            return Connect(configuration, tradingPairID).ContinueWith(x => SubscribeToTradingChannel(configuration, tradingPairID))
-                .ContinueWith(x => Receive(configuration));
-        }
-
-        private Task Disconnect()
-        {
-            switch(_Client.State)
+            if (cancelationToken.IsCancellationRequested)
             {
-                case WebSocketState.Closed:
-                case WebSocketState.None:
-                case WebSocketState.Aborted:
-                    return Task.CompletedTask;
-                default:
-                    return Disconnect();
-            }
+                await _Client.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "cancelation requested", cancelationToken);
+                return;
+            }             
+
+            await SubscribeToTradingChannel(cancelationToken);
         }
 
-        private Task Connect(MarketProviderConfiguration configuration, String tradingPairID)
+        public async Task<Models.TradeEntry> Receive(CancellationToken cancelationToken)
         {
-            //if (_Client.State == WebSocketState)
-            //    _Client.Close();
-            if (!Uri.IsWellFormedUriString(configuration.TradesConfiguration.Url, UriKind.Absolute))
-                throw new UriFormatException();
+            if (_Client.State != WebSocketState.Open)
+                throw new WebSocketException("web scoket connection is not open");
 
-            return _Client.ConnectAsync(new Uri(configuration.TradesConfiguration.Url), new System.Threading.CancellationToken());
+            ArraySegment<byte> messageBuffer = WebSocket.CreateServerBuffer(500);
+            await ReceivePartial(cancelationToken, messageBuffer);
+
+            return Unbox(FromByteArray(messageBuffer));
         }
 
-        private Task SubscribeToTradingChannel(MarketProviderConfiguration configuration, String tradingPairID) 
+        public async Task Stop(CancellationToken cancelationToken)
         {
-            if (String.IsNullOrEmpty(configuration.TradesConfiguration.SubscriptionMessage))
-                throw new ArgumentNullException();
+            if (_Client.State != WebSocketState.Open)
+                throw new WebSocketException("there is no open connection to stop");       
 
-            String withTradingPair = configuration.TradesConfiguration.SubscriptionMessage.Replace("@tradingPair@", tradingPairID);
-            return _Client.SendAsync(ToByteArray(withTradingPair), WebSocketMessageType.Binary, true, new System.Threading.CancellationToken());
+            await _Client.CloseAsync(WebSocketCloseStatus.NormalClosure, "termination requested", cancelationToken);
+
+            _Client.Dispose();
         }
 
-        private void Receive(MarketProviderConfiguration configuration)
+        private Task Connect(CancellationToken onCancel)
         {
-            ArraySegment<byte> response = WebSocket.CreateServerBuffer(500);
-            _Client.ReceiveAsync(response, new System.Threading.CancellationToken())
-                .ContinueWith(x => {
+            //if (!Uri.IsWellFormedUriString(_Configuration.TradesConfiguration.Url, UriKind.Absolute))
+            //    throw new UriFormatException();
 
-                    Models.TradeEntry tradeEntry = Unbox(FromByteArray(response), configuration);
-                    _observer.OnNext(tradeEntry);
+            return _Client.ConnectAsync(new Uri(_Configuration.TradesConfiguration.Url), onCancel);
+        }
 
-                    if (!x.IsCanceled || _Client.State != WebSocketState.CloseSent)
-                        Receive(configuration);
-                });
-            
+        private Task SubscribeToTradingChannel(CancellationToken onCancel) 
+        {
+            String withTradingPair = _Configuration.TradesConfiguration.SubscriptionMessage.Replace("@tradingPair@", _TradingPair);
+
+            return _Client.SendAsync(ToByteArray(withTradingPair), WebSocketMessageType.Binary, true, onCancel);
+        }
+
+        private async Task ReceivePartial(CancellationToken onCancel, ArraySegment<byte> messageBuffer)
+        {
+            if(messageBuffer.Count > 0)
+                onCancel.ThrowIfCancellationRequested();
+
+            var response = await _Client.ReceiveAsync(messageBuffer, onCancel);
+
+            if(!response.EndOfMessage)
+                await ReceivePartial(onCancel, messageBuffer);
         }
 
         private ArraySegment<byte> ToByteArray(String json)
@@ -101,30 +109,30 @@ namespace FellowLibrary.Crawler
             return JsonConvert.DeserializeObject(textMessage);
         }
 
-        private Models.TradeEntry Unbox(object boxedResult, MarketProviderConfiguration configuration)
+        private Models.TradeEntry Unbox(object boxedResult)
         {
             if (boxedResult is null) throw new SocketException();
 
             Newtonsoft.Json.Linq.JObject item = boxedResult as Newtonsoft.Json.Linq.JObject;
             if (item == null) throw new FormatException();
 
-            foreach(var tag in configuration.TradesConfiguration.TradeEntryTags)
+            foreach(var tag in _Configuration.TradesConfiguration.TradeEntryTags)
             {
                 JToken tagValue;
                 if(!item.TryGetValue(tag.Key, out tagValue) || !Equals(tagValue, tag.Value))
                     throw new FormatException();
             }
 
-            decimal? price = item.Value<decimal?>(configuration.TradesConfiguration.PriceField);
+            decimal? price = item.Value<decimal?>(_Configuration.TradesConfiguration.PriceField);
             if (!price.HasValue) throw new FormatException();
 
-            String tradingPairID = item.Value<String>(configuration.TradesConfiguration.TradingPairID);
+            String tradingPairID = item.Value<String>(_Configuration.TradesConfiguration.TradingPairID);
             if (String.IsNullOrEmpty(tradingPairID)) throw new FormatException();
 
-            DateTime? time = item.Value<DateTime?>(configuration.TradesConfiguration.TimeField);
+            DateTime? time = item.Value<DateTime?>(_Configuration.TradesConfiguration.TimeField);
             if (!time.HasValue) throw new FormatException();
 
-            return new Models.TradeEntry() { DateTime = time.Value, Price = price.Value, TradingPair = tradingPairID , Provider = configuration.ID };
+            return new Models.TradeEntry() { DateTime = time.Value, Price = price.Value, TradingPair = tradingPairID , Provider = _Configuration.ID };
         }
     }
 }

@@ -47,7 +47,7 @@ namespace MarketFellowApi
 
 
             services.AddTransient<DatabaseContext>();
-            services.AddTransient<ClientWebSocket>();
+            //services.AddTransient<ClientWebSocket>();
 
             services.AddHttpClient<Models.MarketFellowQuery>();
 

@@ -11,17 +11,17 @@ namespace MarketFellowApi.Models
 {
     public class MarketFellowSubscription : ObjectGraphType
     {
-        public MarketFellowSubscription(ClientWebSocket clientWebSocket, FellowLibrary.Crawler.MarketProvidersConfiguration configuration)
+        public MarketFellowSubscription(FellowLibrary.Crawler.MarketProvidersConfiguration configuration)
         {
-            FieldSubscribe<TradeEntryType>("tradeEntry", 
+            FieldSubscribeAsync<TradeEntryType>("tradeEntry", 
                 resolve: context => context.Source as FellowLibrary.Models.TradeEntry, 
-                subscribe: context => Subscribe(clientWebSocket, configuration, context),
+                subscribeAsync: context => Subscribe(configuration, context),
                  arguments: new QueryArguments(new QueryArgument<IntGraphType>() { Name = "marketProvider" },
                                                new QueryArgument<StringGraphType>() { Name = "tradingPair" })
                 );
         }
 
-        private IObservable<object> Subscribe(ClientWebSocket clientWebSocket, FellowLibrary.Crawler.MarketProvidersConfiguration configuration,
+        private async Task<IObservable<object>> Subscribe(FellowLibrary.Crawler.MarketProvidersConfiguration configuration,
             ResolveEventStreamContext context)
         {
             if (context == null) throw new ArgumentNullException();
@@ -35,7 +35,9 @@ namespace MarketFellowApi.Models
             var tradingPair = context.GetArgument<String>("tradingPair");
             if (String.IsNullOrEmpty(tradingPair)) throw new ArgumentNullException();
 
-            return new FellowLibrary.Crawler.TradingEntryCrawler(clientWebSocket, marketProviderConfiguration, tradingPair);
+            IObservable<object> observable = await FellowLibrary.Crawler.TradeEntrySubscription.Start(marketProviderConfiguration, tradingPair);
+
+            return observable;
         }
     }
 }

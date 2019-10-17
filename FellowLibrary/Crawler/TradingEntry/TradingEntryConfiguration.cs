@@ -17,5 +17,11 @@ namespace FellowLibrary.Crawler
         public String TradingPairID { get; set; }
 
         public Dictionary<String, object> TradeEntryTags { get; set; }
+
+        public Boolean IsValid()
+        {
+            return Uri.IsWellFormedUriString(this.Url, UriKind.Absolute) && !String.IsNullOrEmpty(PriceField) &&
+                !String.IsNullOrEmpty(TimeField) && !string.IsNullOrEmpty(SubscriptionMessage) && !string.IsNullOrEmpty(TradingPairID);
+        }
     }
 }
