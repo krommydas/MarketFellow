@@ -26,13 +26,7 @@ export class DataService {
         return this.getTradeEntriesQuery(filters).valueChanges.pipe(map(result => result.data.tradingEntries));
     }
 
-    getTradeEntriesFeed(filters: Filters): Observable<TradeEntry> {
-        //return this.apollo.subscribe<MarketFellowSubscription>({
-        //    query: gql`subscription tradingEntriesFeed {
-        //                                      tradeEntry(marketProvider: ${filters.MarketProvider}, tradingPair: "${filters.TradePair}")
-        //                                      { price time tradePair }}`}).pipe(map(result => result.data.tradyEntry));
-
-
+    getTradeEntriesFeed(filters: Filters): Observable<TradeEntry[]> {
         var query = this.getTradeEntriesQuery(filters);
 
         query.subscribeToMore({
@@ -52,7 +46,7 @@ export class DataService {
             }
         });
 
-        return query.valueChanges.pipe(map(result => result.data.tradingEntries[0]));
+        return query.valueChanges.pipe(map(result => result.data.tradingEntries));
     }
 
     private getTradeEntriesQuery(filters: Filters): QueryRef<MarketFellowQuery> {

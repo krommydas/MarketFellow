@@ -119,8 +119,8 @@ namespace FellowLibrary.Crawler
             foreach(var tag in _Configuration.TradesConfiguration.TradeEntryTags)
             {
                 JToken tagValue;
-                if(!item.TryGetValue(tag.Key, out tagValue) || !Equals(tagValue, tag.Value))
-                    throw new FormatException();
+                if (!item.TryGetValue(tag.Key, out tagValue) || !Equals(tagValue.Value<String>(), tag.Value))
+                    return null;//throw new FormatException();
             }
 
             decimal? price = item.Value<decimal?>(_Configuration.TradesConfiguration.PriceField);

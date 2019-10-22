@@ -6,21 +6,22 @@ import { MatTableDataSource } from '@angular/material/table';
 
 import { GridColumn } from './grid.model';
 import { TradeEntry } from '../services/data.model'
+import { Observable } from 'rxjs';
 
 @Component({
     selector: 'app-grid',
     templateUrl: './grid.component.html',
 })
-export class GridComponent implements OnInit {
+export class GridComponent<GridItem> implements OnInit {
     constructor() { }
 
     @Input() columns: GridColumn[];
-    @Input() data: TradeEntry[];
+    @Input() data: Observable<GridItem[]>;
 
     @ViewChild(MatPaginator) paginator: MatPaginator;
     @ViewChild(MatSort) sort: MatSort;
 
-    dataSource = new MatTableDataSource<TradeEntry>(this.data);
+    dataSource = new MatTableDataSource<GridItem>([]);
     columnNames: string[];
 
     ngOnInit() {
@@ -28,6 +29,9 @@ export class GridComponent implements OnInit {
 
         this.dataSource.paginator = this.paginator;
         this.dataSource.sort = this.sort;
+
+        if (this.data)
+            this.data.subscribe(x => this.dataSource.data = x);
     }
 
   

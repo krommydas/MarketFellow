@@ -38,7 +38,7 @@ namespace FellowLibrary.Crawler
 
             SubscriptionCancelation source = new SubscriptionCancelation();
 
-            Receive(source.Token).Start();
+            Receive(source.Token);
 
             return source;
         }
@@ -50,7 +50,12 @@ namespace FellowLibrary.Crawler
                 try
                 {
                     Models.TradeEntry item = await _Crawler.Receive(token);
+                    if (item == null) continue;
                     _Observer.OnNext(item);
+                }
+                catch(OperationCanceledException)
+                {
+                    break;
                 }
                 catch(Exception e)
                 {

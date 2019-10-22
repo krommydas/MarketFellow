@@ -4,6 +4,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { MarketProvider, TradePair, Filters, TradeEntry } from '../services/data.model';
 import { GridColumn } from '../grid/grid.model';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -15,7 +16,7 @@ export class HomeComponent implements OnInit {
     marketProviders: MarketProvider[];
     tradePairs: TradePair[];
     filters: Filters;
-    tradeEntries: TradeEntry[];
+    tradeEntriesFeed: Observable<TradeEntry[]>;
 
     tradeEntryGridColumns: GridColumn[];
 
@@ -33,10 +34,8 @@ export class HomeComponent implements OnInit {
 
         this.filters = new Filters(selectedProvider, selectedPair);
 
-        setTimeout(x =>
-            this.dataService.getTradeEntriesFeed(this.filters).subscribe(items => this.tradeEntries = []), 7000);
-
-        
+        if (selectedProvider && selectedPair)
+            this.tradeEntriesFeed = this.dataService.getTradeEntriesFeed(this.filters);
     }
 
     onProviderSelected(selectedProvider: number) {
