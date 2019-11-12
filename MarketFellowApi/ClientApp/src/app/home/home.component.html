@@ -27,10 +27,8 @@
 
     <mat-grid-tile></mat-grid-tile>
 
-    <mat-grid-tile colspan="4" rowspan="2">
-      <app-grid *ngIf="tradeEntriesFeed" [columns]="tradeEntryGridColumns" [data]="tradeEntriesFeed"></app-grid>
-    </mat-grid-tile>
-
   </mat-grid-list>
-
+   
+  <app-grid *ngIf="tradeEntriesFeed" [columns]="tradeEntryGridColumns" [data]="tradeEntriesFeed" style="width:100%"></app-grid>
+ 
 </mat-card>

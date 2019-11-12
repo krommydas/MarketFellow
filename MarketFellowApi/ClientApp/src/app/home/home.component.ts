@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
+  styles:['mat-card { margin-bottom:10px;}']
 })
 export class HomeComponent implements OnInit {
     constructor(private router: Router, private currentRoute: ActivatedRoute, private dataService: DataService) { }

@@ -1,4 +1,4 @@
-import { Component, ViewChild, OnInit, Input } from '@angular/core';
+import { Component, ViewChild, OnInit, Input, ViewEncapsulation } from '@angular/core';
 
 import { MatSort } from '@angular/material/sort';
 import { MatPaginator } from '@angular/material/paginator';
@@ -11,6 +11,8 @@ import { Observable } from 'rxjs';
 @Component({
     selector: 'app-grid',
     templateUrl: './grid.component.html',
+    styleUrls: ['./grid.component.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class GridComponent<GridItem> implements OnInit {
     constructor() { }
